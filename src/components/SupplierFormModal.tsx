@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Supplier, StockItem } from '../types';
-import { X, Calendar, ShoppingCart, Info, AlertCircle, Sparkles, Box } from 'lucide-react';
+import { X, Calendar, ShoppingCart, AlertCircle } from 'lucide-react';
 
 interface SupplierFormModalProps {
   supplier: Supplier | null; // Null means adding new, non-null means editing
@@ -14,21 +14,7 @@ interface SupplierFormModalProps {
   stockItems?: StockItem[];
 }
 
-// Industry-specific suggestion chips to speed up data entry for Carpole's purchasing team
-const INDUSTRIAL_EQUIPMENT_SUGGESTIONS = [
-  "Compresseur Frigorifique Bitzer",
-  "Fluide Frigorigène R404A (Bouteille 10kg)",
-  "Panneaux Sandwich Isothermes (Épaisseur 80mm)",
-  "Évaporateur Ventilé Double Flux",
-  "Groupe Frigorifique de Route (Thermokking)",
-  "Porte Isotherme Pivotante avec Résistance",
-  "Thermostat Électronique Digital Eliwell",
-  "Sonde de Température Intelligente PT100",
-  "Profilés d'angle en Aluminium anodisé",
-  "Joints d'étanchéité de porte silicone"
-];
-
-export default function SupplierFormModal({ supplier, onClose, onSave, stockItems }: SupplierFormModalProps) {
+export default function SupplierFormModal({ supplier, onClose, onSave }: SupplierFormModalProps) {
   const [nomPrenom, setNomPrenom] = useState('');
   const [telephone, setTelephone] = useState('');
   const [articleAchete, setArticleAchete] = useState('');
@@ -37,7 +23,6 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
   const [dateAchat, setDateAchat] = useState('');
   const [livre, setLivre] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [selectedStockId, setSelectedStockId] = useState<string>('__custom__');
 
   useEffect(() => {
     if (supplier) {
@@ -48,16 +33,6 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       setQuantite(supplier.quantite ?? 1);
       setDateAchat(supplier.dateAchat || new Date().toISOString().split('T')[0]);
       setLivre(supplier.livre ?? false);
-      
-      // Select matching stock item if exists
-      if (stockItems) {
-        const match = stockItems.find(s => s.nom.toLowerCase().trim() === (supplier.articleAchete || '').toLowerCase().trim());
-        if (match) {
-          setSelectedStockId(match.id);
-        } else {
-          setSelectedStockId('__custom__');
-        }
-      }
     } else {
       setNomPrenom('');
       setTelephone('');
@@ -66,35 +41,8 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       setQuantite(1);
       setDateAchat(new Date().toISOString().split('T')[0]); // Default to today
       setLivre(false);
-      
-      if (stockItems && stockItems.length > 0) {
-        setSelectedStockId(stockItems[0].id);
-        setArticleAchete(stockItems[0].nom);
-        setPrixUnitaire(stockItems[0].prixUnitaireMoyen);
-      } else {
-        setSelectedStockId('__custom__');
-      }
     }
-  }, [supplier, stockItems]);
-
-  const handleStockChange = (id: string) => {
-    setSelectedStockId(id);
-    if (id === '__custom__') {
-      setArticleAchete('');
-      setPrixUnitaire(0);
-    } else {
-      const match = stockItems?.find(s => s.id === id);
-      if (match) {
-        setArticleAchete(match.nom);
-        setPrixUnitaire(match.prixUnitaireMoyen);
-      }
-    }
-  };
-
-  const handleSelectSuggestion = (val: string) => {
-    setSelectedStockId('__custom__');
-    setArticleAchete(val);
-  };
+  }, [supplier]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,14 +94,14 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       <div id="supplier-form-content" className="bg-white rounded-lg shadow-xl border border-slate-200 max-w-2xl w-full my-4 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2 border-b border-slate-200 bg-slate-50">
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 bg-slate-50">
           <h3 className="text-xs font-black text-slate-800 flex items-center gap-1.5 uppercase tracking-wide">
             <ShoppingCart className="w-4 h-4 text-slate-500" />
             {supplier ? 'Modifier l\'Achat Fournisseur' : 'Enregistrer un Nouvel Achat'}
           </h3>
           <button 
             onClick={onClose} 
-            className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-150 transition-colors"
+            className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-150 transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -198,72 +146,17 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
               />
             </div>
 
-            {/* Article acheté */}
-            <div className="space-y-1 sm:col-span-2">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wide block">Sélectionner un Article du Stock *</label>
-              
-              {stockItems && stockItems.length > 0 ? (
-                <select
-                  value={selectedStockId}
-                  onChange={(e) => handleStockChange(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-850 text-xs focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs cursor-pointer mb-2"
-                >
-                  <optgroup label="Matières Premières (Stock)">
-                    {stockItems.filter(item => item.type === 'matiere_premiere').map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.nom} (P.U. Moyen: {item.prixUnitaireMoyen.toLocaleString('fr-FR')} DA)
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="Produits Finis (Stock)">
-                    {stockItems.filter(item => item.type === 'produit_fini').map(item => (
-                      <option key={item.id} value={item.id}>
-                        {item.nom} (P.U. Moyen: {item.prixUnitaireMoyen.toLocaleString('fr-FR')} DA)
-                      </option>
-                    ))}
-                  </optgroup>
-                  <option value="__custom__">🔍 Saisie personnalisée / Nouvel Article non référencé...</option>
-                </select>
-              ) : null}
-
-              {/* Free text input if custom selected or stockItems is empty */}
-              {(selectedStockId === '__custom__' || !stockItems || stockItems.length === 0) && (
-                <div className="space-y-1">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase block">Nom de l'article personnalisé *</label>
-                  <input
-                    type="text"
-                    required
-                    value={articleAchete}
-                    onChange={(e) => setArticleAchete(e.target.value)}
-                    placeholder="Ex: Compresseur 12V haute capacité"
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-slate-800 text-xs focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs"
-                  />
-                </div>
-              )}
-
-              {/* Suggestions chips */}
-              <div className="pt-1.5">
-                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wide block mb-1 flex items-center gap-0.5">
-                  <Sparkles className="w-3 h-3 text-amber-500 animate-pulse" />
-                  Suggestions rapides (Équipements frigorifiques & pièces de rechange) :
-                </span>
-                <div className="flex flex-wrap gap-1 max-h-[55px] overflow-y-auto p-1 border border-slate-200 rounded-md bg-slate-50/50">
-                  {INDUSTRIAL_EQUIPMENT_SUGGESTIONS.map((sug, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => handleSelectSuggestion(sug)}
-                      className={`text-[9px] px-1.5 py-0.5 rounded-full border transition-all cursor-pointer ${
-                        articleAchete === sug 
-                          ? 'bg-amber-500 border-amber-500 text-white font-bold' 
-                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                      }`}
-                    >
-                      {sug}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            {/* Case: Ajouter l'article juste sous Fournisseur */}
+            <div className="space-y-0.5 sm:col-span-2">
+              <label className="text-[10px] font-extrabold text-amber-900 uppercase tracking-wide block">Ajouter l'article *</label>
+              <input
+                type="text"
+                required
+                value={articleAchete}
+                onChange={(e) => setArticleAchete(e.target.value)}
+                placeholder="Ex: Compresseur 12V, Panneaux Sandwich 80mm, Fluide R404A..."
+                className="w-full px-2.5 py-1.5 bg-amber-50/50 border border-amber-300 rounded-md text-slate-900 text-xs font-bold focus:border-amber-500 focus:bg-white focus:outline-hidden transition-all shadow-3xs"
+              />
             </div>
 
             {/* Prix unitaire */}
