@@ -1,0 +1,6 @@
+{
+  "name": "Carpole Industriel - Gestion Commerciale",
+  "description": "Système de gestion des ventes et des achats (clients et fournisseurs) pour l'entreprise Carpole Industriel, fabricant et installateur de carrosseries isothermes et de groupes frigorifiques.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
