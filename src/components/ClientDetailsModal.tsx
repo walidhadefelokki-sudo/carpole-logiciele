@@ -323,125 +323,130 @@ export default function ClientDetailsModal({ client, onClose, onEdit, onViewFile
               </h4>
               
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 leading-normal">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">Prix HT (U)</p>
-                  <p className="text-xs sm:text-sm font-black font-mono text-slate-800">{formatCurrency(client.prixBase)}</p>
-                </div>
-                
-                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between leading-normal">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">Remise</p>
-                  <div className="flex items-center gap-1.5">
-                    <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none uppercase ${client.remise ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'}`}>
-                      {client.remise ? 'OUI' : 'NON'}
-                    </span>
-                    {client.remise && (
-                      <span className="text-xs font-black text-emerald-600 font-mono">-{client.tauxRemise}%</span>
-                    )}
-                  </div>
-                </div>
+                {(() => {
+                  const totalHT = client.produits && client.produits.length > 0
+                    ? client.produits.reduce((sum, item) => sum + ((item.prixApresRemise || item.prixBase || 0) * (item.quantite || 1)), 0)
+                    : (client.prixApresRemise || client.prixBase || 0);
+                  const totalTVA = client.tvaApplicable !== false ? Math.round(totalHT * 0.19) : 0;
+                  const totalTTC = totalHT + totalTVA;
 
-                <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between leading-normal">
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">TVA (19%)</p>
-                  <span className={`inline-flex items-center w-fit px-2 py-0.5 rounded-md text-[9px] font-black leading-none uppercase ${client.tvaApplicable !== false ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-600'}`}>
-                    {client.tvaApplicable !== false ? 'OUI (19%)' : 'NON (0%)'}
-                  </span>
-                </div>
+                  return (
+                    <>
+                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 leading-normal">
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">Total HT Commande</p>
+                        <p className="text-xs sm:text-sm font-black font-mono text-slate-800">{formatCurrency(totalHT)}</p>
+                      </div>
+                      
+                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between leading-normal">
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">Remise</p>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`inline-flex px-1.5 py-0.5 rounded-md text-[9px] font-black leading-none uppercase ${client.remise ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-200 text-slate-600'}`}>
+                            {client.remise ? 'OUI' : 'NON'}
+                          </span>
+                          {client.remise && (
+                            <span className="text-xs font-black text-emerald-600 font-mono">-{client.tauxRemise}%</span>
+                          )}
+                        </div>
+                      </div>
 
-                <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between leading-normal shadow-xs">
-                  <p className="text-[9px] text-amber-300 font-black uppercase tracking-wider leading-none mb-1.5">Prix Total TTC (U)</p>
-                  <p className="text-sm font-black font-mono text-white leading-none">
-                    {formatCurrency(client.tvaApplicable !== false ? Math.round(client.prixApresRemise * 1.19) : client.prixApresRemise)}
-                  </p>
-                </div>
+                      <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200 flex flex-col justify-between leading-normal">
+                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider leading-none mb-1.5">TVA (19%)</p>
+                        <span className={`inline-flex items-center w-fit px-2 py-0.5 rounded-md text-[9px] font-black leading-none uppercase ${client.tvaApplicable !== false ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'bg-slate-200 text-slate-600'}`}>
+                          {client.tvaApplicable !== false ? 'OUI (19%)' : 'NON (0%)'}
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 flex flex-col justify-between leading-normal shadow-xs">
+                        <p className="text-[9px] text-amber-300 font-black uppercase tracking-wider leading-none mb-1.5">Total Général TTC</p>
+                        <p className="text-sm font-black font-mono text-white leading-none">
+                          {formatCurrency(totalTTC)}
+                        </p>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
 
               {client.remise && (
                 <div className="text-xs bg-emerald-50/50 p-3 rounded-xl border border-emerald-200/80 text-emerald-800 flex items-center gap-2 font-bold mb-4">
                   <DollarSign className="w-4 h-4 text-emerald-600 flex-shrink-0" />
                   <span>
-                    Économie réalisée par unité : <strong className="font-mono text-emerald-700 text-sm">{formatCurrency(client.prixBase - client.prixApresRemise)}</strong>
+                    Remise accordée appliquée sur le montant de la commande
                   </span>
                 </div>
               )}
 
               {/* Suivi de l'état d'avancement de paiement */}
               <div className="pt-4 border-t border-slate-100 space-y-3.5">
-                <div className="flex justify-between items-center">
-                  <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">État d'Avancement du Paiement</h5>
-                  {(() => {
-                    const prixUnitaireFinal = client.tvaApplicable !== false ? Math.round(client.prixApresRemise * 1.19) : client.prixApresRemise;
-                    const totalContrat = prixUnitaireFinal * (client.quantite || 1);
-                    const montantPaye = client.montantPaye || 0;
-                    const pourcentage = totalContrat > 0 ? Math.min(100, Math.round((montantPaye / totalContrat) * 100)) : 0;
-                    
-                    if (pourcentage === 100) {
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full leading-none">
-                          ✓ Entièrement Payé
-                        </span>
-                      );
-                    } else if (pourcentage > 0) {
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full leading-none">
-                          ⚡ Paiement Partiel
-                        </span>
-                      );
-                    } else {
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-red-50 text-red-650 border border-red-200 px-2.5 py-1 rounded-full leading-none">
-                          ⚠️ En Attente de Règlement
-                        </span>
-                      );
-                    }
-                  })()}
-                </div>
-
                 {(() => {
-                  const totalContrat = client.prixApresRemise * (client.quantite || 1);
+                  const totalHT = client.produits && client.produits.length > 0
+                    ? client.produits.reduce((sum, item) => sum + ((item.prixApresRemise || item.prixBase || 0) * (item.quantite || 1)), 0)
+                    : (client.prixApresRemise || client.prixBase || 0);
+                  const totalTVA = client.tvaApplicable !== false ? Math.round(totalHT * 0.19) : 0;
+                  const totalContratTTC = totalHT + totalTVA;
                   const montantPaye = client.montantPaye || 0;
-                  const reste = Math.max(0, totalContrat - montantPaye);
-                  const pourcentage = totalContrat > 0 ? Math.min(100, Math.round((montantPaye / totalContrat) * 100)) : 0;
+                  const reste = Math.max(0, totalContratTTC - montantPaye);
+                  const pourcentage = totalContratTTC > 0 ? Math.min(100, Math.round((montantPaye / totalContratTTC) * 100)) : 0;
 
                   return (
-                    <div className="space-y-2.5">
-                      {/* Bar and percent text */}
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500 font-bold">Pourcentage payé :</span>
-                        <span className="font-mono font-black text-slate-900">{pourcentage}%</span>
-                      </div>
-
-                      {/* Custom styled track & progress fill */}
-                      <div className="w-full bg-slate-100 border border-slate-200/60 rounded-full h-3 overflow-hidden p-0.5">
-                        <div 
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            pourcentage === 100 
-                              ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-3xs' 
-                              : pourcentage > 0 
-                                ? 'bg-gradient-to-r from-amber-400 to-amber-500' 
-                                : 'bg-red-400'
-                          }`}
-                          style={{ width: `${pourcentage}%` }}
-                        />
-                      </div>
-
-                      {/* Details row showing Paid / Total / Balance */}
-                      <div className="grid grid-cols-3 gap-2 text-xs font-mono font-bold leading-tight pt-1.5 text-center">
-                        <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5">
-                          <span className="text-[8px] text-slate-400 font-sans block uppercase font-black tracking-wider mb-1">Total Contrat ({client.quantite || 1} Qté)</span>
-                          <span className="text-slate-800 text-[10px] sm:text-xs">{formatCurrency(totalContrat)}</span>
-                        </div>
-                        <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-2.5">
-                          <span className="text-[8px] text-emerald-700 font-sans block uppercase font-black tracking-wider mb-1">Montant Payé</span>
-                          <span className="text-emerald-700 text-[10px] sm:text-xs">{formatCurrency(montantPaye)}</span>
-                        </div>
-                        <div className={`border rounded-xl p-2.5 ${reste > 0 ? 'bg-amber-50/30 border-amber-200' : 'bg-slate-50 border-slate-150'}`}>
-                          <span className="text-[8px] text-slate-400 font-sans block uppercase font-black tracking-wider mb-1">Reste à Régler</span>
-                          <span className={`text-[10px] sm:text-xs ${reste > 0 ? 'text-amber-600 font-black' : 'text-slate-500'}`}>
-                            {formatCurrency(reste)}
+                    <>
+                      <div className="flex justify-between items-center">
+                        <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Échéancier & État de Règlement</h5>
+                        {pourcentage === 100 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-full leading-none">
+                            ✓ Entièrement Payé (100%)
                           </span>
+                        ) : pourcentage > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-full leading-none">
+                            ⚡ Acompte Versé ({pourcentage}%)
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase bg-red-50 text-red-650 border border-red-200 px-2.5 py-1 rounded-full leading-none">
+                            ⚠️ En Attente de Règlement (0%)
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* Bar and percent text */}
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500 font-bold">Pourcentage payé :</span>
+                          <span className="font-mono font-black text-slate-900">{pourcentage}%</span>
+                        </div>
+
+                        {/* Custom styled track & progress fill */}
+                        <div className="w-full bg-slate-100 border border-slate-200/60 rounded-full h-3 overflow-hidden p-0.5">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              pourcentage === 100 
+                                ? 'bg-gradient-to-r from-emerald-500 to-teal-500 shadow-3xs' 
+                                : pourcentage > 0 
+                                  ? 'bg-gradient-to-r from-amber-400 to-amber-500' 
+                                  : 'bg-red-400'
+                            }`}
+                            style={{ width: `${pourcentage}%` }}
+                          />
+                        </div>
+
+                        {/* Details row showing Paid / Total / Balance */}
+                        <div className="grid grid-cols-3 gap-2 text-xs font-mono font-bold leading-tight pt-1.5 text-center">
+                          <div className="bg-slate-50 border border-slate-150 rounded-xl p-2.5">
+                            <span className="text-[8px] text-slate-400 font-sans block uppercase font-black tracking-wider mb-1">Total Commande ({client.quantite || 1} Qté)</span>
+                            <span className="text-slate-800 text-[10px] sm:text-xs">{formatCurrency(totalContratTTC)}</span>
+                          </div>
+                          <div className="bg-emerald-50/30 border border-emerald-100 rounded-xl p-2.5">
+                            <span className="text-[8px] text-emerald-700 font-sans block uppercase font-black tracking-wider mb-1">Montant Payé (Acompte)</span>
+                            <span className="text-emerald-700 text-[10px] sm:text-xs">{formatCurrency(montantPaye)}</span>
+                          </div>
+                          <div className={`border rounded-xl p-2.5 ${reste > 0 ? 'bg-amber-50/30 border-amber-200' : 'bg-slate-50 border-slate-150'}`}>
+                            <span className="text-[8px] text-slate-400 font-sans block uppercase font-black tracking-wider mb-1">Reste à Régler</span>
+                            <span className={`text-[10px] sm:text-xs ${reste > 0 ? 'text-amber-600 font-black' : 'text-slate-500'}`}>
+                              {formatCurrency(reste)}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </>
                   );
                 })()}
               </div>

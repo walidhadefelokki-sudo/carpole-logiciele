@@ -118,7 +118,11 @@ export default function ClientSection({
       filterDocs === 'all' ? true :
       filterDocs === 'complets' ? hasAllDocs : !hasAllDocs;
 
-    const totalContrat = client.prixApresRemise * (client.quantite || 1);
+    const totalContratHT = client.produits && client.produits.length > 0
+      ? client.produits.reduce((sum, item) => sum + ((item.prixApresRemise || item.prixBase || 0) * (item.quantite || 1)), 0)
+      : (client.prixApresRemise || client.prixBase || 0);
+    const totalContratTVA = client.tvaApplicable !== false ? Math.round(totalContratHT * 0.19) : 0;
+    const totalContrat = totalContratHT + totalContratTVA;
     const montantPaye = client.montantPaye || 0;
     const remains = totalContrat - montantPaye;
 
@@ -608,7 +612,11 @@ export default function ClientSection({
                       {/* Statut Paiement (Avancement & Reste) */}
                       <td className="px-5 py-4">
                         {(() => {
-                          const totalContrat = client.prixApresRemise * (client.quantite || 1);
+                          const totalContratHT = client.produits && client.produits.length > 0
+                            ? client.produits.reduce((sum, item) => sum + ((item.prixApresRemise || item.prixBase || 0) * (item.quantite || 1)), 0)
+                            : (client.prixApresRemise || client.prixBase || 0);
+                          const totalContratTVA = client.tvaApplicable !== false ? Math.round(totalContratHT * 0.19) : 0;
+                          const totalContrat = totalContratHT + totalContratTVA;
                           const montantPaye = client.montantPaye || 0;
                           const reste = Math.max(0, totalContrat - montantPaye);
                           const pourcentage = totalContrat > 0 ? Math.min(100, Math.round((montantPaye / totalContrat) * 100)) : 0;

@@ -934,28 +934,36 @@ export default function ClientFormModal({
                         </div>
 
                         {/* Quick Payment Buttons */}
-                        <div className="flex gap-2 pt-1">
-                          <button
-                            type="button"
-                            onClick={() => setMontantPaye(0)}
-                            className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] font-extrabold rounded-lg border border-slate-800 text-center transition-colors cursor-pointer"
-                          >
-                            Non payé (0 DA)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMontantPaye(Math.round(totalContractTTC / 2))}
-                            className="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-extrabold rounded-lg border border-amber-500/30 text-center transition-colors cursor-pointer"
-                          >
-                            Acompte (50%)
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMontantPaye(totalContractTTC)}
-                            className="flex-1 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-extrabold rounded-lg border border-emerald-500/30 text-center transition-colors cursor-pointer"
-                          >
-                            Total (100%)
-                          </button>
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setMontantPaye(0)}
+                              className="flex-1 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-300 text-[10px] font-extrabold rounded-lg border border-slate-800 text-center transition-colors cursor-pointer"
+                              title="Aucun acompte versé (Reste à payer = 100%)"
+                            >
+                              Non payé (0 DA)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMontantPaye(Math.round(totalContractTTC / 2))}
+                              className="flex-1 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-extrabold rounded-lg border border-amber-500/30 text-center transition-colors cursor-pointer"
+                              title="Acompte de 50% calculé sur le montant total TTC de l'achat"
+                            >
+                              Acompte (50% du Total)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setMontantPaye(totalContractTTC)}
+                              className="flex-1 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 text-[10px] font-extrabold rounded-lg border border-emerald-500/30 text-center transition-colors cursor-pointer"
+                              title="Règlement total de la commande"
+                            >
+                              Total (100% TTC)
+                            </button>
+                          </div>
+                          <p className="text-[9px] text-slate-400 font-sans italic">
+                            💡 L'acompte 50% s'applique sur le montant total général de la commande (tous produits et quantités confondus).
+                          </p>
                         </div>
                       </div>
                     </div>
