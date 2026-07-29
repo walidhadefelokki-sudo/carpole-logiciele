@@ -155,11 +155,48 @@ export default function App() {
     }
   };
 
+  // Helper to sync newly purchased products to Stock table automatically
+  const syncSupplierProductsToStock = async (supplier: Supplier) => {
+    const productsToSync = supplier.produits && supplier.produits.length > 0
+      ? supplier.produits
+      : [{
+          id: crypto.randomUUID(),
+          produit: supplier.articleAchete,
+          prixUnitaire: supplier.prixUnitaire,
+          quantite: supplier.quantite,
+          type: 'matiere_premiere' as const,
+          unite: 'Unités'
+        }];
+
+    for (const prod of productsToSync) {
+      if (!prod.produit || !prod.produit.trim()) continue;
+      const targetName = prod.produit.trim();
+      const existing = stockItems.find(st => st.nom.toLowerCase().trim() === targetName.toLowerCase());
+      if (!existing) {
+        const newStockItem: StockItem = {
+          id: crypto.randomUUID(),
+          nom: targetName,
+          type: prod.type || 'matiere_premiere',
+          unite: prod.unite || 'Unités',
+          quantiteInitiale: 0,
+          seuilAlerte: 2,
+          prixUnitaireMoyen: prod.prixUnitaire || 0,
+          fournisseurNom: supplier.nomPrenom,
+          fournisseurTelephone: supplier.telephone,
+          createdAt: new Date().toISOString()
+        };
+        await saveStockItem(newStockItem);
+        setStockItems(prev => [newStockItem, ...prev]);
+      }
+    }
+  };
+
   // Supplier Actions
   const handleAddSupplier = async (newSupplier: Supplier) => {
     try {
       await saveSupplier(newSupplier);
       setSuppliers(prev => [newSupplier, ...prev]);
+      await syncSupplierProductsToStock(newSupplier);
     } catch (err) {
       console.error("Failed to add supplier:", err);
       alert("Erreur lors de l'enregistrement de l'achat.");
@@ -170,6 +207,7 @@ export default function App() {
     try {
       await saveSupplier(updatedSupplier);
       setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+      await syncSupplierProductsToStock(updatedSupplier);
     } catch (err) {
       console.error("Failed to edit supplier:", err);
       alert("Erreur lors de la modification de l'achat.");

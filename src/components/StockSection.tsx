@@ -49,23 +49,56 @@ export default function StockSection({
   const [formFournisseurTelephone, setFormFournisseurTelephone] = useState('');
   const [formError, setFormError] = useState('');
 
+  // Helper function to sum quantity for a specific product name from a supplier
+  const getSupplierProductQty = (s: Supplier, itemNom: string): number => {
+    const target = itemNom.toLowerCase().trim();
+    if (s.produits && s.produits.length > 0) {
+      return s.produits.reduce((sum, p) => {
+        if ((p.produit || '').toLowerCase().trim() === target) {
+          return sum + (p.quantite || 0);
+        }
+        return sum;
+      }, 0);
+    }
+    if ((s.articleAchete || '').toLowerCase().trim() === target) {
+      return s.quantite || 0;
+    }
+    return 0;
+  };
+
+  // Helper function to sum quantity for a specific product name from a client purchase
+  const getClientProductQty = (c: Client, itemNom: string): number => {
+    const target = itemNom.toLowerCase().trim();
+    if (c.produits && c.produits.length > 0) {
+      return c.produits.reduce((sum, p) => {
+        if ((p.produit || '').toLowerCase().trim() === target) {
+          return sum + (p.quantite || 0);
+        }
+        return sum;
+      }, 0);
+    }
+    if ((c.produit || '').toLowerCase().trim() === target) {
+      return c.quantite || 0;
+    }
+    return 0;
+  };
+
   // 1. Calculate dynamic statistics for each stock item based on client purchases & supplier deliveries
   const stockWithCalculations = useMemo(() => {
     return stockItems.map(item => {
       // Received quantity from suppliers (only if delivered)
       const recu = suppliers
-        .filter(s => s.articleAchete.toLowerCase().trim() === item.nom.toLowerCase().trim() && s.livre)
-        .reduce((sum, s) => sum + (s.quantite || 0), 0);
+        .filter(s => s.livre)
+        .reduce((sum, s) => sum + getSupplierProductQty(s, item.nom), 0);
 
       // Pending quantity in transit from suppliers
       const enTransit = suppliers
-        .filter(s => s.articleAchete.toLowerCase().trim() === item.nom.toLowerCase().trim() && !s.livre)
-        .reduce((sum, s) => sum + (s.quantite || 0), 0);
+        .filter(s => !s.livre)
+        .reduce((sum, s) => sum + getSupplierProductQty(s, item.nom), 0);
 
       // Sold quantity to clients
       const vendu = clients
-        .filter(c => c.produit && c.produit.toLowerCase().trim() === item.nom.toLowerCase().trim())
-        .reduce((sum, c) => sum + (c.quantite || 0), 0);
+        .reduce((sum, c) => sum + getClientProductQty(c, item.nom), 0);
 
       const restante = item.quantiteInitiale + recu - vendu;
       const valeurTotal = Math.max(0, restante) * item.prixUnitaireMoyen;

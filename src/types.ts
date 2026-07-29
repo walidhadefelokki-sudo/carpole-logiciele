@@ -66,6 +66,15 @@ export interface Client {
   createdAt: string;
 }
 
+export interface SupplierProductItem {
+  id: string;
+  produit: string;
+  prixUnitaire: number;
+  quantite: number;
+  type?: 'matiere_premiere' | 'produit_fini';
+  unite?: string;
+}
+
 export interface Supplier {
   id: string;
   nomPrenom: string;
@@ -76,6 +85,9 @@ export interface Supplier {
   dateAchat: string;
   livre: boolean; // Livré oui/non
   createdAt: string;
+  produits?: SupplierProductItem[]; // Liste de plusieurs produits/articles achetés
+  montantPaye?: number; // Montant payé au fournisseur en DA
+  tvaApplicable?: boolean; // TVA 19% applicable (Oui / Non)
 }
 
 export interface StockItem {
