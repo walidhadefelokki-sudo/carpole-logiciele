@@ -319,31 +319,29 @@ export default function App() {
           {/* Large Navigation Tabs */}
           <div className="flex items-center gap-1 bg-slate-850 p-1 rounded-xl border border-slate-700/45 self-start md:self-center">
             {currentUser?.role !== 'gestionnaire_stock' && (
-              <>
-                <button
-                  onClick={() => setActiveTab('clients')}
-                  className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
-                    activeTab === 'clients'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
-                      : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <Users className="w-4 h-4" />
-                  Clients & Ventes
-                </button>
-                <button
-                  onClick={() => setActiveTab('suppliers')}
-                  className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
-                    activeTab === 'suppliers'
-                      ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
-                      : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/60'
-                  }`}
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  Fournisseurs
-                </button>
-              </>
+              <button
+                onClick={() => setActiveTab('clients')}
+                className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+                  activeTab === 'clients'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/60'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                Clients & Ventes
+              </button>
             )}
+            <button
+              onClick={() => setActiveTab('suppliers')}
+              className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+                activeTab === 'suppliers'
+                  ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                  : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/60'
+              }`}
+            >
+              <ShoppingBag className="w-4 h-4" />
+              Fournisseurs
+            </button>
             <button
               onClick={() => setActiveTab('stock')}
               className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
