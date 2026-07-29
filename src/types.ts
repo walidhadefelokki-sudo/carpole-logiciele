@@ -102,3 +102,17 @@ export interface StockItem {
   fournisseurNom?: string; // Fournisseur par défaut/habituel
   fournisseurTelephone?: string; // Téléphone du fournisseur par défaut
 }
+
+export interface StockMovement {
+  id: string;
+  typeMouvement: 'ENTREE' | 'SORTIE';
+  date: string;
+  produit: string;
+  quantite: number;
+  unite: string;
+  typeArticle: 'matiere_premiere' | 'produit_fini';
+  nomUtilisateur: string; // Intervenant / Nom d'utilisateur (ex: Samy Stock)
+  tierNom?: string; // Nom du Client (pour Sortie) ou Fournisseur (pour Entrée)
+  motif?: string; // Remarque / Motif (ex: Consommation atelier, Vente client, etc.)
+  createdAt: string;
+}

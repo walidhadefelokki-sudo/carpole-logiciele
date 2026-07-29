@@ -4,29 +4,32 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Client, Supplier, AttachedFile, User, StockItem } from './types';
+import { Client, Supplier, AttachedFile, User, StockItem, StockMovement } from './types';
 import { 
   getClients, saveClient, deleteClient, 
   getSuppliers, saveSupplier, deleteSupplier,
-  getStockItems, saveStockItem, deleteStockItem
+  getStockItems, saveStockItem, deleteStockItem,
+  getStockMovements, saveStockMovement
 } from './lib/db';
 import { SEED_CLIENTS, SEED_SUPPLIERS, SEED_STOCK } from './lib/seedData';
 import DashboardStats from './components/DashboardStats';
 import ClientSection from './components/ClientSection';
 import SupplierSection from './components/SupplierSection';
 import StockSection from './components/StockSection';
+import StockHistorySection from './components/StockHistorySection';
 import FilePreviewModal from './components/FilePreviewModal';
 import UserProfileModal from './components/UserProfileModal';
 import LoginScreen from './components/LoginScreen';
 import { CarpoleLogo } from './components/CarpoleLogo';
-import { Snowflake, Truck, ShieldAlert, CheckCircle2, ShoppingBag, Users, Calendar, LogOut, Shield, Lock, TrendingUp, Boxes, User as UserIcon } from 'lucide-react';
+import { Snowflake, Truck, ShieldAlert, CheckCircle2, ShoppingBag, Users, Calendar, LogOut, Shield, Lock, TrendingUp, Boxes, User as UserIcon, History } from 'lucide-react';
 import AnalyticsSection from './components/AnalyticsSection';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'stock' | 'analytics'>('clients');
+  const [activeTab, setActiveTab] = useState<'clients' | 'suppliers' | 'stock' | 'history' | 'analytics'>('clients');
   const [clients, setClients] = useState<Client[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [stockItems, setStockItems] = useState<StockItem[]>([]);
+  const [movements, setMovements] = useState<StockMovement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
@@ -54,7 +57,7 @@ export default function App() {
   // Redirect users according to role permissions
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'gestionnaire_stock' && activeTab !== 'stock') {
+      if (currentUser.role === 'gestionnaire_stock' && activeTab !== 'stock' && activeTab !== 'suppliers' && activeTab !== 'history') {
         setActiveTab('stock');
       } else if (currentUser.role !== 'admin' && activeTab === 'analytics') {
         setActiveTab('clients');
@@ -77,6 +80,7 @@ export default function App() {
         let loadedClients = await getClients();
         let loadedSuppliers = await getSuppliers();
         let loadedStock = await getStockItems();
+        let loadedMovements = await getStockMovements();
 
         // Populate database with our premium Algerian seed data
         let databaseUpdated = false;
@@ -109,6 +113,7 @@ export default function App() {
         setClients(loadedClients);
         setSuppliers(loadedSuppliers);
         setStockItems(loadedStock);
+        setMovements(loadedMovements || []);
       } catch (err) {
         console.error("IndexedDB error during startup:", err);
         setDbError("Impossible de charger la base de données locale. Vérifiez les autorisations de votre navigateur.");
@@ -119,6 +124,15 @@ export default function App() {
 
     loadData();
   }, []);
+
+  const handleAddStockMovement = async (movement: StockMovement) => {
+    try {
+      await saveStockMovement(movement);
+      setMovements(prev => [movement, ...prev]);
+    } catch (err) {
+      console.error("Failed to add stock movement:", err);
+    }
+  };
 
   // Customer Actions
   const handleAddClient = async (newClient: Client) => {
@@ -317,7 +331,7 @@ export default function App() {
           </div>
 
           {/* Large Navigation Tabs */}
-          <div className="flex items-center gap-1 bg-slate-850 p-1 rounded-xl border border-slate-700/45 self-start md:self-center">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-850 p-1 rounded-xl border border-slate-700/45 self-start md:self-center">
             {currentUser?.role !== 'gestionnaire_stock' && (
               <button
                 onClick={() => setActiveTab('clients')}
@@ -353,6 +367,20 @@ export default function App() {
               <Boxes className="w-4 h-4" />
               Gestion de stock
             </button>
+
+            {currentUser && (
+              <button
+                onClick={() => setActiveTab('history')}
+                className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-lg text-sm font-bold tracking-wide transition-all duration-200 cursor-pointer ${
+                  activeTab === 'history'
+                    ? 'bg-amber-500 text-slate-950 shadow-sm font-black'
+                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/60'
+                }`}
+              >
+                <History className="w-4 h-4 text-amber-400" />
+                Historique Entrées/Sorties
+              </button>
+            )}
             {currentUser?.role === 'admin' && (
               <button
                 onClick={() => setActiveTab('analytics')}
@@ -500,6 +528,15 @@ export default function App() {
                   onEditStockItem={handleEditStockItem}
                   onDeleteStockItem={handleDeleteStockItem}
                   userRole={currentUser?.role}
+                  currentUser={currentUser}
+                  onAddStockMovement={handleAddStockMovement}
+                />
+              ) : activeTab === 'history' ? (
+                <StockHistorySection
+                  movements={movements}
+                  suppliers={suppliers}
+                  clients={clients}
+                  currentUser={currentUser}
                 />
               ) : currentUser?.role === 'admin' ? (
                 <AnalyticsSection

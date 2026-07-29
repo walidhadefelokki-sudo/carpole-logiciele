@@ -4,7 +4,8 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { StockItem, Client, Supplier } from '../types';
+import { StockItem, Client, Supplier, User, StockMovement } from '../types';
+import StockExitModal from './StockExitModal';
 import { 
   Package, Boxes, Plus, Search, Edit, Trash2, 
   AlertTriangle, CheckCircle, Info, Coins, 
@@ -20,6 +21,8 @@ interface StockSectionProps {
   onEditStockItem: (item: StockItem) => void;
   onDeleteStockItem: (id: string) => void;
   userRole?: 'admin' | 'commercial' | 'gestionnaire_stock';
+  currentUser?: User | null;
+  onAddStockMovement?: (movement: StockMovement) => void;
 }
 
 export default function StockSection({
@@ -29,7 +32,9 @@ export default function StockSection({
   onAddStockItem,
   onEditStockItem,
   onDeleteStockItem,
-  userRole
+  userRole,
+  currentUser,
+  onAddStockMovement
 }: StockSectionProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'matiere_premiere' | 'produit_fini'>('all');
@@ -41,11 +46,6 @@ export default function StockSection({
 
   // Stock Exit Modal state
   const [isExitModalOpen, setIsExitModalOpen] = useState(false);
-  const [exitStockItemId, setExitStockItemId] = useState<string>('');
-  const [exitQuantite, setExitQuantite] = useState<number>(1);
-  const [exitType, setExitType] = useState<'matiere_premiere' | 'produit_fini'>('matiere_premiere');
-  const [exitUnite, setExitUnite] = useState<string>('Unités');
-  const [exitError, setExitError] = useState<string>('');
   
   // Form state
   const [formNom, setFormNom] = useState('');
@@ -176,66 +176,50 @@ export default function StockSection({
 
   // Handle open exit stock modal
   const handleOpenExitModal = () => {
-    const firstItem = stockItems[0];
-    if (firstItem) {
-      setExitStockItemId(firstItem.id);
-      setExitType(firstItem.type);
-      setExitUnite(firstItem.unite);
-    } else {
-      setExitStockItemId('');
-      setExitType('matiere_premiere');
-      setExitUnite('Unités');
-    }
-    setExitQuantite(1);
-    setExitError('');
     setIsExitModalOpen(true);
   };
 
-  const handleSelectExitProduct = (id: string) => {
-    setExitStockItemId(id);
-    const item = stockItems.find(s => s.id === id);
-    if (item) {
-      setExitType(item.type);
-      setExitUnite(item.unite);
-    }
-  };
+  const handleBatchConfirmExit = (exits: Array<{
+    stockItemId: string;
+    produit: string;
+    quantite: number;
+    type: 'matiere_premiere' | 'produit_fini';
+    unite: string;
+    clientNom: string;
+    username: string;
+    motif?: string;
+    date?: string;
+  }>) => {
+    exits.forEach(exit => {
+      const targetItem = stockItems.find(s => s.id === exit.stockItemId);
+      if (targetItem) {
+        const newQuantiteInitiale = Math.max(0, targetItem.quantiteInitiale - exit.quantite);
+        const updatedItem: StockItem = {
+          ...targetItem,
+          quantiteInitiale: newQuantiteInitiale,
+          type: exit.type,
+          unite: exit.unite
+        };
+        onEditStockItem(updatedItem);
 
-  const handleConfirmExit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!exitStockItemId) {
-      setExitError("Veuillez sélectionner un produit du stock.");
-      return;
-    }
-    if (exitQuantite <= 0) {
-      setExitError("La quantité utilisée doit être supérieure à 0.");
-      return;
-    }
-
-    const targetItem = stockItems.find(s => s.id === exitStockItemId);
-    if (!targetItem) {
-      setExitError("Produit introuvable dans le stock.");
-      return;
-    }
-
-    const calcItem = stockWithCalculations.find(s => s.id === exitStockItemId);
-    const stockDispo = calcItem ? calcItem.restante : targetItem.quantiteInitiale;
-
-    if (exitQuantite > stockDispo) {
-      setExitError(`La quantité demandée (${exitQuantite}) dépasse le stock disponible actuellement (${stockDispo} ${exitUnite}).`);
-      return;
-    }
-
-    // Direct deduction from quantiteInitiale to reflect directly in stock table
-    const newQuantiteInitiale = Math.max(0, targetItem.quantiteInitiale - exitQuantite);
-    const updatedItem: StockItem = {
-      ...targetItem,
-      quantiteInitiale: newQuantiteInitiale,
-      type: exitType,
-      unite: exitUnite.trim() || targetItem.unite
-    };
-
-    onEditStockItem(updatedItem);
-    setIsExitModalOpen(false);
+        // Record stock movement
+        if (onAddStockMovement) {
+          onAddStockMovement({
+            id: crypto.randomUUID(),
+            typeMouvement: 'SORTIE',
+            date: exit.date || new Date().toISOString(),
+            produit: exit.produit,
+            quantite: exit.quantite,
+            unite: exit.unite,
+            typeArticle: exit.type,
+            nomUtilisateur: exit.username,
+            tierNom: exit.clientNom,
+            motif: exit.motif || 'Sortie Atelier / Client',
+            createdAt: new Date().toISOString()
+          });
+        }
+      }
+    });
   };
 
   // Handle open modal
@@ -903,128 +887,15 @@ export default function StockSection({
       )}
 
       {/* Sortir un Article Modal */}
-      {isExitModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-          <div className="bg-white rounded-2xl shadow-xl border border-slate-200 max-w-lg w-full my-4 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
-            
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-slate-200 bg-slate-900 text-white">
-              <h3 className="text-xs font-black flex items-center gap-2 uppercase tracking-wide text-amber-400">
-                <MinusCircle className="w-4 h-4 text-amber-400 stroke-[2.5px]" />
-                Sortir un Article du Stock
-              </h3>
-              <button 
-                onClick={() => setIsExitModalOpen(false)} 
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                <Plus className="w-4 h-4 rotate-45 stroke-[3px]" />
-              </button>
-            </div>
-
-            {/* Form */}
-            <form onSubmit={handleConfirmExit} className="p-5 space-y-4 text-left">
-              
-              {exitError && (
-                <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl p-3 flex items-start gap-2 text-xs">
-                  <ShieldAlert className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Erreur : </span>
-                    <span>{exitError}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Selection de produit */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                  Sélection du Produit à Sortir *
-                </label>
-                <select
-                  required
-                  value={exitStockItemId}
-                  onChange={(e) => handleSelectExitProduct(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-250 rounded-xl text-slate-850 text-xs font-bold focus:ring-2 focus:ring-amber-500/10 focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs cursor-pointer"
-                >
-                  <option value="">-- Choisir un article disponible en stock --</option>
-                  {stockWithCalculations.map(st => (
-                    <option key={st.id} value={st.id}>
-                      {st.nom} ({st.type === 'matiere_premiere' ? 'Matière Première' : 'Produit Fini'}) — Stock dispo: {st.restante} {st.unite}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Quantite utilisee */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                  Quantité Utilisée / Sortie *
-                </label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={exitQuantite}
-                  onChange={(e) => setExitQuantite(Math.max(1, parseInt(e.target.value) || 1))}
-                  placeholder="Ex: 1, 5, 10..."
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-250 rounded-xl text-slate-850 text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500/10 focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs"
-                />
-                <p className="text-[9px] text-slate-400 font-medium">
-                  Nombre d'unités consommées ou prélevées du stock pour la production ou le service.
-                </p>
-              </div>
-
-              {/* Type et Unite */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    Type d'Article *
-                  </label>
-                  <select
-                    value={exitType}
-                    onChange={(e) => setExitType(e.target.value as 'matiere_premiere' | 'produit_fini')}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-250 rounded-xl text-slate-850 text-xs font-bold focus:ring-2 focus:ring-amber-500/10 focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs cursor-pointer"
-                  >
-                    <option value="produit_fini">Produit Fini</option>
-                    <option value="matiere_premiere">Matière Première</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">
-                    Unité de Mesure *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={exitUnite}
-                    onChange={(e) => setExitUnite(e.target.value)}
-                    placeholder="Ex: Unités, m², kg"
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-250 rounded-xl text-slate-850 text-xs font-bold focus:ring-2 focus:ring-amber-500/10 focus:border-amber-500 focus:outline-hidden transition-all shadow-3xs"
-                  />
-                </div>
-              </div>
-
-              {/* Footer Buttons */}
-              <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsExitModalOpen(false)}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-xs active:scale-97 cursor-pointer"
-                >
-                  Confirmer la Sortie
-                </button>
-              </div>
-
-            </form>
-          </div>
-        </div>
-      )}
+      <StockExitModal
+        isOpen={isExitModalOpen}
+        onClose={() => setIsExitModalOpen(false)}
+        stockItems={stockItems}
+        stockWithCalculations={stockWithCalculations}
+        clients={clients}
+        currentUser={currentUser || null}
+        onConfirmExit={handleBatchConfirmExit}
+      />
 
     </div>
   );

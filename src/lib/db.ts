@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Client, Supplier, StockItem } from '../types';
+import { Client, Supplier, StockItem, StockMovement } from '../types';
 
 const DB_NAME = 'CarpoleIndustrielDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_CLIENTS = 'clients';
 const STORE_SUPPLIERS = 'suppliers';
 const STORE_STOCK = 'stock';
+const STORE_MOVEMENTS = 'stock_movements';
 
 export function initDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -25,6 +26,9 @@ export function initDB(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_STOCK)) {
         db.createObjectStore(STORE_STOCK, { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains(STORE_MOVEMENTS)) {
+        db.createObjectStore(STORE_MOVEMENTS, { keyPath: 'id' });
       }
     };
 
@@ -179,6 +183,57 @@ export async function deleteStockItem(id: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_STOCK, 'readwrite');
     const store = transaction.objectStore(STORE_STOCK);
+    const request = store.delete(id);
+
+    request.onsuccess = () => {
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function getStockMovements(): Promise<StockMovement[]> {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_MOVEMENTS, 'readonly');
+    const store = transaction.objectStore(STORE_MOVEMENTS);
+    const request = store.getAll();
+
+    request.onsuccess = () => {
+      resolve(request.result as StockMovement[]);
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function saveStockMovement(movement: StockMovement): Promise<void> {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_MOVEMENTS, 'readwrite');
+    const store = transaction.objectStore(STORE_MOVEMENTS);
+    const request = store.put(movement);
+
+    request.onsuccess = () => {
+      resolve();
+    };
+
+    request.onerror = () => {
+      reject(request.error);
+    };
+  });
+}
+
+export async function deleteStockMovement(id: string): Promise<void> {
+  const db = await initDB();
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_MOVEMENTS, 'readwrite');
+    const store = transaction.objectStore(STORE_MOVEMENTS);
     const request = store.delete(id);
 
     request.onsuccess = () => {
