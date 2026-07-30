@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Client, AttachedFile } from '../types';
 import { DocumentType } from './DocumentViewerModal';
-import { X, Phone, Mail, Building2, FileText, Clipboard, Check, DollarSign, AlertCircle, Edit, Download, Eye, Snowflake, Thermometer, ShieldAlert, FileCheck, Truck, Printer, Clock } from 'lucide-react';
+import { X, Phone, Mail, Building2, FileText, Clipboard, Check, DollarSign, AlertCircle, Edit, Download, Eye, Snowflake, Thermometer, ShieldAlert, FileCheck, Truck, Printer, Clock, Banknote, CreditCard } from 'lucide-react';
 
 interface ClientDetailsModalProps {
   client: Client | null;
@@ -445,6 +445,52 @@ export default function ClientDetailsModal({ client, onClose, onEdit, onViewFile
                             </span>
                           </div>
                         </div>
+
+                        {/* Details Moyen de Paiement */}
+                        {montantPaye > 0 && (
+                          <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                <Banknote className="w-3.5 h-3.5 text-amber-500" />
+                                Moyen de Paiement :
+                              </span>
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                                client.modePaiement === 'cheque'
+                                  ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                  : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                              }`}>
+                                {client.modePaiement === 'cheque' ? (
+                                  <>
+                                    <CreditCard className="w-3 h-3 text-amber-600" />
+                                    Chèque
+                                  </>
+                                ) : (
+                                  <>
+                                    <Banknote className="w-3 h-3 text-emerald-600" />
+                                    Cash / Espèces
+                                  </>
+                                )}
+                              </span>
+                            </div>
+
+                            {client.modePaiement === 'cheque' && (
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-200/60 font-mono text-[11px]">
+                                <div>
+                                  <span className="text-[9px] font-extrabold text-slate-400 uppercase block font-sans">Nom & Prénom</span>
+                                  <span className="font-extrabold text-slate-900">{client.chequeNomPrenom || 'Non spécifié'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] font-extrabold text-slate-400 uppercase block font-sans">Banque</span>
+                                  <span className="font-extrabold text-slate-900">{client.chequeBanque || 'Non spécifiée'}</span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] font-extrabold text-slate-400 uppercase block font-sans">Référence Chèque</span>
+                                  <span className="font-extrabold text-amber-700">{client.chequeReference || 'Non spécifiée'}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </>
                   );

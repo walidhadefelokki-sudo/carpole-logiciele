@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Client } from '../types';
 import { CarpoleLogo } from './CarpoleLogo';
-import { Printer, X, FileText, CheckCircle2, Truck, FileCheck, DollarSign, Building2, Calendar, ShieldCheck, Factory, Layers, Info } from 'lucide-react';
+import { Printer, X, FileText, CheckCircle2, Truck, FileCheck, DollarSign, Building2, Calendar, ShieldCheck, Factory, Layers, Info, Banknote, CreditCard } from 'lucide-react';
 
 export type DocumentType = 'facture' | 'bon_commande' | 'bon_livraison';
 export type FactureVariant = 'auto' | 'acompte_30' | 'acompte_custom' | 'solde' | 'proforma';
@@ -332,10 +332,9 @@ export default function DocumentViewerModal({ client, initialType = 'facture', o
             {/* Right: Company Fiscal Registration Box */}
             <div className="text-right text-[11px] font-mono text-slate-700 bg-slate-50 p-3.5 rounded-xl border border-slate-200 min-w-[240px] space-y-1">
               <p className="font-extrabold text-slate-900 text-xs border-b border-slate-200 pb-1 mb-1 font-sans uppercase">Identifiants Légaux</p>
-              <p><span className="text-slate-500 font-sans">N° RC :</span> 19/00-0123456B19</p>
-              <p><span className="text-slate-500 font-sans">N° NIF :</span> 001919012345678</p>
-              <p><span className="text-slate-500 font-sans">N° NIS :</span> 001919001002</p>
-              <p><span className="text-slate-500 font-sans">N° Article :</span> 19012345678</p>
+              <p><span className="text-slate-500 font-sans">N° RC :</span> 21B0073197</p>
+              <p><span className="text-slate-500 font-sans">N° NIF :</span> 002125007319732</p>
+              <p><span className="text-slate-500 font-sans">N° NIS :</span> 002125010026564</p>
             </div>
           </div>
 
@@ -478,6 +477,52 @@ export default function DocumentViewerModal({ client, initialType = 'facture', o
                   <p className="text-[11px] leading-relaxed">
                     Le client soussigné reconnaît avoir reçu la marchandise / l'équipement désigné ci-dessus en parfait état de fonctionnement, conforme aux caractéristiques techniques convenues.
                   </p>
+                </div>
+              )}
+
+              {/* Moyen de Paiement Used */}
+              {montantPaye > 0 && client.modePaiement && (
+                <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+                    <span className="font-black text-slate-900 uppercase text-[10px] tracking-wider flex items-center gap-1.5 font-sans">
+                      <Banknote className="w-3.5 h-3.5 text-amber-600" />
+                      Moyen de Paiement :
+                    </span>
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      client.modePaiement === 'cheque'
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                        : 'bg-emerald-100 text-emerald-900 border border-emerald-300'
+                    }`}>
+                      {client.modePaiement === 'cheque' ? (
+                        <>
+                          <CreditCard className="w-3 h-3 text-amber-600" />
+                          Chèque
+                        </>
+                      ) : (
+                        <>
+                          <Banknote className="w-3 h-3 text-emerald-600" />
+                          Cash / Espèces
+                        </>
+                      )}
+                    </span>
+                  </div>
+
+                  {client.modePaiement === 'cheque' && (
+                    <div className="grid grid-cols-3 gap-2 pt-1 font-mono text-[11px]">
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block font-sans">Nom & Prénom</span>
+                        <span className="font-bold text-slate-900">{client.chequeNomPrenom || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block font-sans">Banque</span>
+                        <span className="font-bold text-slate-900">{client.chequeBanque || '—'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase block font-sans">Référence Chèque</span>
+                        <span className="font-bold text-amber-800">{client.chequeReference || '—'}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Client, AttachedFile, StockItem, Supplier, ClientType, EtapeCommande, DetailVente, ClientProductItem } from '../types';
-import { X, Upload, Trash2, Eye, FileText, AlertCircle, Calculator, Percent, Sparkles, Box, DollarSign, Layers, Wrench, Factory, CheckCircle2, Plus, Clock, ShoppingCart, Check } from 'lucide-react';
+import { X, Upload, Trash2, Eye, FileText, AlertCircle, Calculator, Percent, Sparkles, Box, DollarSign, Layers, Wrench, Factory, CheckCircle2, Plus, Clock, ShoppingCart, Check, Banknote, CreditCard } from 'lucide-react';
 
 interface ClientFormModalProps {
   client: Client | null; // Null means adding new, non-null means editing
@@ -49,6 +49,10 @@ export default function ClientFormModal({
   const [etapeCommande, setEtapeCommande] = useState<EtapeCommande>('stratification');
   const [dateAchat, setDateAchat] = useState('');
   const [montantPaye, setMontantPaye] = useState<number>(0);
+  const [modePaiement, setModePaiement] = useState<'cash' | 'cheque'>('cash');
+  const [chequeNomPrenom, setChequeNomPrenom] = useState('');
+  const [chequeBanque, setChequeBanque] = useState('');
+  const [chequeReference, setChequeReference] = useState('');
 
   // Files
   const [bonCommande, setBonCommande] = useState<AttachedFile | null>(null);
@@ -92,6 +96,10 @@ export default function ClientFormModal({
       setEtapeCommande(client.etapeCommande || 'stratification');
       setDateAchat(client.dateAchat || (client.createdAt ? client.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]));
       setMontantPaye(client.montantPaye ?? 0);
+      setModePaiement(client.modePaiement || 'cash');
+      setChequeNomPrenom(client.chequeNomPrenom || '');
+      setChequeBanque(client.chequeBanque || '');
+      setChequeReference(client.chequeReference || '');
       setBonCommande(client.bonCommande);
       setFacture(client.facture);
       setBonLivraison(client.bonLivraison);
@@ -128,6 +136,10 @@ export default function ClientFormModal({
       setEtapeCommande('stratification');
       setDateAchat(new Date().toISOString().split('T')[0]);
       setMontantPaye(0);
+      setModePaiement('cash');
+      setChequeNomPrenom('');
+      setChequeBanque('');
+      setChequeReference('');
       setBonCommande(null);
       setFacture(null);
       setBonLivraison(null);
@@ -244,6 +256,13 @@ export default function ClientFormModal({
       return;
     }
 
+    if (montantPaye > 0 && modePaiement === 'cheque') {
+      if (!chequeNomPrenom.trim() || !chequeBanque.trim() || !chequeReference.trim()) {
+        setErrorMsg("Veuillez remplir toutes les informations du chèque (Nom & Prénom, Banque, et Référence du chèque).");
+        return;
+      }
+    }
+
     const firstProd = products[0];
     const totalQuantite = products.reduce((sum, p) => sum + (p.quantite || 1), 0);
     const totalPrixBase = products.reduce((sum, p) => sum + (p.prixBase || 0) * (p.quantite || 1), 0);
@@ -275,6 +294,10 @@ export default function ClientFormModal({
       quantite: totalQuantite,
       dateAchat,
       montantPaye,
+      modePaiement: montantPaye > 0 ? modePaiement : undefined,
+      chequeNomPrenom: (montantPaye > 0 && modePaiement === 'cheque') ? chequeNomPrenom.trim() : undefined,
+      chequeBanque: (montantPaye > 0 && modePaiement === 'cheque') ? chequeBanque.trim() : undefined,
+      chequeReference: (montantPaye > 0 && modePaiement === 'cheque') ? chequeReference.trim() : undefined,
       bonCommande,
       facture,
       bonLivraison,
@@ -965,6 +988,98 @@ export default function ClientFormModal({
                             💡 L'acompte 50% s'applique sur le montant total général de la commande (tous produits et quantités confondus).
                           </p>
                         </div>
+
+                        {/* Mode de Paiement (Cash / Chèque) - Only if montantPaye > 0 */}
+                        {montantPaye > 0 && (
+                          <div className="mt-3 p-3.5 bg-slate-900 border border-slate-700/80 rounded-xl space-y-3">
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                              <label className="text-[11px] font-black text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                                <Banknote className="w-4 h-4 text-amber-400" />
+                                Moyen de Paiement *
+                              </label>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                Requis (Montant payé: {new Intl.NumberFormat('fr-DZ', { style: 'currency', currency: 'DZD', maximumFractionDigits: 0 }).format(montantPaye)})
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => setModePaiement('cash')}
+                                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                  modePaiement === 'cash'
+                                    ? 'bg-emerald-500 text-slate-950 border-emerald-400 shadow-xs'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                                }`}
+                              >
+                                <Banknote className="w-4 h-4" />
+                                1- Cash (Espèces)
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => setModePaiement('cheque')}
+                                className={`flex items-center justify-center gap-2 p-2.5 rounded-xl border text-xs font-black transition-all cursor-pointer ${
+                                  modePaiement === 'cheque'
+                                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs'
+                                    : 'bg-slate-950 text-slate-300 border-slate-800 hover:bg-slate-800'
+                                }`}
+                              >
+                                <CreditCard className="w-4 h-4" />
+                                2- Chèque
+                              </button>
+                            </div>
+
+                            {/* Informations spécifiques au chèque */}
+                            {modePaiement === 'cheque' && (
+                              <div className="p-3 bg-slate-950 border border-amber-500/30 rounded-xl space-y-2.5">
+                                <p className="text-[10px] font-black text-amber-300 uppercase tracking-wider">
+                                  📋 Informations obligatoires du chèque :
+                                </p>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-extrabold text-slate-300 uppercase tracking-wider block">
+                                      Nom et Prénom *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={chequeNomPrenom}
+                                      onChange={(e) => setChequeNomPrenom(e.target.value)}
+                                      placeholder="Ex: Benali Mohamed"
+                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs font-bold focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-extrabold text-slate-300 uppercase tracking-wider block">
+                                      Banque *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={chequeBanque}
+                                      onChange={(e) => setChequeBanque(e.target.value)}
+                                      placeholder="Ex: BNA, CPA, BEA..."
+                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs font-bold focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400"
+                                    />
+                                  </div>
+
+                                  <div className="space-y-1">
+                                    <label className="text-[9px] font-extrabold text-slate-300 uppercase tracking-wider block">
+                                      Référence du chèque *
+                                    </label>
+                                    <input
+                                      type="text"
+                                      value={chequeReference}
+                                      onChange={(e) => setChequeReference(e.target.value)}
+                                      placeholder="Ex: CHQ-98765432"
+                                      className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-white text-xs font-bold font-mono focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   );

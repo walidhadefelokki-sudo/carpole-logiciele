@@ -63,6 +63,10 @@ export interface Client {
   quantite?: number; // Quantité achetée
   dateAchat?: string; // Date d'achat
   montantPaye?: number; // Montant payé en DA
+  modePaiement?: 'cash' | 'cheque'; // Moyen de paiement (cash ou chèque)
+  chequeNomPrenom?: string; // Nom et prénom pour le chèque
+  chequeBanque?: string; // Banque émettrice du chèque
+  chequeReference?: string; // Référence / N° du chèque
   createdAt: string;
 }
 
