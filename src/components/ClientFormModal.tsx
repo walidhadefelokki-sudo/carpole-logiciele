@@ -733,34 +733,36 @@ export default function ClientFormModal({
                         </div>
 
                         {/* Segment & Quantité & Prix Unitaire */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Segment Froid</label>
-                            <div className="grid grid-cols-2 gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => updateProduct(idx, 'segment', 'frais')}
-                                className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer border ${
-                                  p.segment === 'frais'
-                                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-3xs'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                Frais (+4°C)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => updateProduct(idx, 'segment', 'surgele')}
-                                className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer border ${
-                                  p.segment === 'surgele'
-                                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-3xs'
-                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                                }`}
-                              >
-                                Surgelé (-20°C)
-                              </button>
+                        <div className={`grid grid-cols-1 ${typeClient === 'production' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-3`}>
+                          {typeClient === 'production' && (
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Segment Froid</label>
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => updateProduct(idx, 'segment', 'frais')}
+                                  className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer border ${
+                                    p.segment === 'frais'
+                                      ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-3xs'
+                                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  Frais (+4°C)
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => updateProduct(idx, 'segment', 'surgele')}
+                                  className={`py-1.5 px-2 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer border ${
+                                    p.segment === 'surgele'
+                                      ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-3xs'
+                                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                                  }`}
+                                >
+                                  Surgelé (-20°C)
+                                </button>
+                              </div>
                             </div>
-                          </div>
+                          )}
 
                           <div className="space-y-1">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider block">Quantité *</label>

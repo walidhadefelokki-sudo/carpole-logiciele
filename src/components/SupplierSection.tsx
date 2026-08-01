@@ -7,7 +7,7 @@ import React, { useState } from 'react';
 import { Supplier, StockItem } from '../types';
 import { 
   Plus, Search, Edit, Trash2, Calendar, AlertTriangle, Filter, X, 
-  CheckCircle, Hourglass, ShoppingBag, Coins, Layers, Phone, DollarSign, CreditCard
+  CheckCircle, Hourglass, ShoppingBag, Coins, Layers, Phone, DollarSign, CreditCard, FileText, Eye
 } from 'lucide-react';
 import SupplierFormModal from './SupplierFormModal';
 
@@ -86,22 +86,24 @@ export default function SupplierSection({
     }
   };
 
-  // Filter suppliers
-  const filteredSuppliers = suppliers.filter((supplier) => {
-    const productsSearchStr = supplier.produits && supplier.produits.length > 0
-      ? supplier.produits.map(p => p.produit).join(' ')
-      : supplier.articleAchete;
+  // Filter suppliers (sorted by date descending - du dernier au premier)
+  const filteredSuppliers = suppliers
+    .filter((supplier) => {
+      const productsSearchStr = supplier.produits && supplier.produits.length > 0
+        ? supplier.produits.map(p => p.produit).join(' ')
+        : supplier.articleAchete;
 
-    const matchesSearch = 
-      supplier.nomPrenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      productsSearchStr.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = 
+        supplier.nomPrenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        productsSearchStr.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesDelivery = 
-      filterDelivery === 'all' ? true :
-      filterDelivery === 'livre' ? supplier.livre : !supplier.livre;
+      const matchesDelivery = 
+        filterDelivery === 'all' ? true :
+        filterDelivery === 'livre' ? supplier.livre : !supplier.livre;
 
-    return matchesSearch && matchesDelivery;
-  });
+      return matchesSearch && matchesDelivery;
+    })
+    .sort((a, b) => new Date(b.dateAchat || b.createdAt || 0).getTime() - new Date(a.dateAchat || a.createdAt || 0).getTime());
 
   // Financial summary calculations
   const totalTTCAll = filteredSuppliers.reduce((sum, s) => sum + getSupplierTotalTTC(s), 0);
@@ -338,6 +340,19 @@ export default function SupplierSection({
                       {/* Action buttons */}
                       <td className="px-5 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                          {supplier.devis && (
+                            <button
+                              onClick={() => {
+                                const win = window.open();
+                                win?.document.write(`<iframe src="${supplier.devis!.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded-lg text-[11px] font-bold transition-colors cursor-pointer"
+                              title={`Voir devis: ${supplier.devis.name}`}
+                            >
+                              <FileText className="w-3.5 h-3.5 text-blue-600" />
+                              Devis
+                            </button>
+                          )}
                           <button
                             onClick={() => handleOpenEditForm(supplier)}
                             className="p-2 hover:bg-slate-100 hover:text-slate-700 text-slate-400 rounded-lg transition-colors cursor-pointer"

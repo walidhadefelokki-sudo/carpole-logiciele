@@ -67,6 +67,27 @@ export interface Client {
   chequeNomPrenom?: string; // Nom et prénom pour le chèque
   chequeBanque?: string; // Banque émettrice du chèque
   chequeReference?: string; // Référence / N° du chèque
+  delaiRealisation?: string; // Délai de réalisation (Proforma)
+  rendezVous?: string; // Rendez-vous pris (Proforma)
+  isProforma?: boolean; // Facture proforma uniquement
+  createdAt: string;
+}
+
+export interface ProformaInvoice {
+  id: string;
+  nomPrenom: string;
+  telephone?: string;
+  email?: string;
+  nis?: string;
+  nif?: string;
+  rc?: string;
+  numArticle?: string;
+  dateCreation: string;
+  delaiRealisation?: string; // Délai de réalisation
+  rendezVous?: string; // Date / note de rendez-vous
+  produits: ClientProductItem[];
+  tvaApplicable?: boolean;
+  notes?: string;
   createdAt: string;
 }
 
@@ -77,6 +98,8 @@ export interface SupplierProductItem {
   quantite: number;
   type?: 'matiere_premiere' | 'produit_fini';
   unite?: string;
+  transit?: number; // Prix unitaire du transit DA
+  margeBeneficiaire?: number; // Marge bénéficiaire
 }
 
 export interface Supplier {
@@ -92,6 +115,7 @@ export interface Supplier {
   produits?: SupplierProductItem[]; // Liste de plusieurs produits/articles achetés
   montantPaye?: number; // Montant payé au fournisseur en DA
   tvaApplicable?: boolean; // TVA 19% applicable (Oui / Non)
+  devis?: AttachedFile | null; // Devis du fournisseur attaché (PDF)
 }
 
 export interface StockItem {

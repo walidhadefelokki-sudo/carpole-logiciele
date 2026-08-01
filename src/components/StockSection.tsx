@@ -164,14 +164,16 @@ export default function StockSection({
     };
   }, [stockWithCalculations, stockItems]);
 
-  // 3. Filtered Stock list
+  // 3. Filtered Stock list (sorted by date descending - du dernier au premier)
   const filteredStock = useMemo(() => {
-    return stockWithCalculations.filter(item => {
-      const matchesSearch = item.nom.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = typeFilter === 'all' || item.type === typeFilter;
-      const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
-      return matchesSearch && matchesType && matchesStatus;
-    });
+    return stockWithCalculations
+      .filter(item => {
+        const matchesSearch = item.nom.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = typeFilter === 'all' || item.type === typeFilter;
+        const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
+        return matchesSearch && matchesType && matchesStatus;
+      })
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [stockWithCalculations, searchTerm, typeFilter, statusFilter]);
 
   // Handle open exit stock modal

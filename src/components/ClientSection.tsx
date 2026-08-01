@@ -4,14 +4,15 @@
  */
 
 import React, { useState } from 'react';
-import { Client, AttachedFile, Supplier, StockItem, ClientType, EtapeCommande } from '../types';
+import { Client, AttachedFile, Supplier, StockItem, ClientType, EtapeCommande, ProformaInvoice } from '../types';
 import { 
   Plus, Search, Edit, Trash2, Eye, FileText, Download, Check, AlertTriangle, 
-  Sparkles, Filter, X, ChevronRight, CheckCircle2, Phone, Mail, FileCheck, Receipt, Truck, DollarSign, Factory, Layers, Clock
+  Sparkles, Filter, X, ChevronRight, CheckCircle2, Phone, Mail, FileCheck, Receipt, Truck, DollarSign, Factory, Layers, Clock, ArrowRightLeft, FileSpreadsheet, Printer
 } from 'lucide-react';
 import ClientFormModal from './ClientFormModal';
 import ClientDetailsModal from './ClientDetailsModal';
 import DocumentViewerModal, { DocumentType } from './DocumentViewerModal';
+import ProformaFormModal from './ProformaFormModal';
 
 interface ClientSectionProps {
   clients: Client[];
@@ -51,9 +52,101 @@ export default function ClientSection({
   const [selectedDocClient, setSelectedDocClient] = useState<Client | null>(null);
   const [selectedDocType, setSelectedDocType] = useState<DocumentType>('facture');
 
+  // Proforma Invoices state
+  const [proformaInvoices, setProformaInvoices] = useState<ProformaInvoice[]>(() => {
+    try {
+      const saved = localStorage.getItem('carpole_proforma_invoices');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [isProformaFormOpen, setIsProformaFormOpen] = useState(false);
+  const [activeClientTab, setActiveClientTab] = useState<'real' | 'proforma'>('real');
+
   const handleOpenDocument = (client: Client, type: DocumentType) => {
     setSelectedDocClient(client);
     setSelectedDocType(type);
+  };
+
+  const handleSaveProforma = (proforma: ProformaInvoice, autoPrint: boolean = false) => {
+    setProformaInvoices(prev => {
+      const updated = [proforma, ...prev];
+      localStorage.setItem('carpole_proforma_invoices', JSON.stringify(updated));
+      return updated;
+    });
+    setIsProformaFormOpen(false);
+
+    if (autoPrint) {
+      handleOpenProformaDocument(proforma);
+    }
+  };
+
+  const handleDeleteProforma = (id: string) => {
+    setProformaInvoices(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      localStorage.setItem('carpole_proforma_invoices', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleOpenProformaDocument = (proforma: ProformaInvoice) => {
+    const clientView: Client = {
+      id: proforma.id,
+      nomPrenom: proforma.nomPrenom,
+      telephone: proforma.telephone || '',
+      email: proforma.email || '',
+      nis: proforma.nis || '',
+      nif: proforma.nif || '',
+      rc: proforma.rc || '',
+      numArticle: proforma.numArticle || '',
+      bonCommande: null,
+      facture: null,
+      bonLivraison: null,
+      retour: '',
+      remise: false,
+      prixBase: 0,
+      tauxRemise: 0,
+      prixApresRemise: 0,
+      tvaApplicable: proforma.tvaApplicable,
+      produits: proforma.produits,
+      dateAchat: proforma.dateCreation,
+      delaiRealisation: proforma.delaiRealisation,
+      rendezVous: proforma.rendezVous,
+      isProforma: true,
+      createdAt: proforma.createdAt
+    };
+    setSelectedDocClient(clientView);
+    setSelectedDocType('facture');
+  };
+
+  const handleConvertProformaToClient = (proforma: ProformaInvoice) => {
+    const newClient: Client = {
+      id: crypto.randomUUID(),
+      nomPrenom: proforma.nomPrenom,
+      telephone: proforma.telephone || '',
+      email: proforma.email || '',
+      nis: proforma.nis || '',
+      nif: proforma.nif || '',
+      rc: proforma.rc || '',
+      numArticle: proforma.numArticle || '',
+      bonCommande: null,
+      facture: null,
+      bonLivraison: null,
+      retour: '',
+      remise: false,
+      prixBase: 0,
+      tauxRemise: 0,
+      prixApresRemise: 0,
+      tvaApplicable: proforma.tvaApplicable,
+      produits: proforma.produits,
+      typeClient: 'carrossier',
+      quantite: proforma.produits.reduce((s, p) => s + (p.quantite || 1), 0),
+      dateAchat: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString()
+    };
+    onAddClient(newClient);
+    handleDeleteProforma(proforma.id);
   };
 
   // Delete confirmation
@@ -139,7 +232,22 @@ export default function ClientSection({
       filterEtape === 'all' ? true : client.etapeCommande === filterEtape;
 
     return matchesSearch && matchesRemise && matchesAttente && matchesDocs && matchesPayment && matchesType && matchesEtape;
+  }).sort((a, b) => {
+    const dateA = new Date(a.dateAchat || a.createdAt || 0).getTime();
+    const dateB = new Date(b.dateAchat || b.createdAt || 0).getTime();
+    return dateB - dateA;
   });
+
+  const filteredProformas = proformaInvoices.filter(p => {
+    const productsSearchStr = p.produits ? p.produits.map(item => item.produit).join(' ') : '';
+    const search = searchTerm.toLowerCase();
+    return (
+      p.nomPrenom.toLowerCase().includes(search) ||
+      (p.telephone && p.telephone.toLowerCase().includes(search)) ||
+      (p.email && p.email.toLowerCase().includes(search)) ||
+      productsSearchStr.toLowerCase().includes(search)
+    );
+  }).sort((a, b) => new Date(b.dateCreation || b.createdAt || 0).getTime() - new Date(a.dateCreation || a.createdAt || 0).getTime());
 
   const renderDocBadge = (file: AttachedFile | null, label: string, icon: React.ReactNode) => {
     if (!file) {
@@ -174,16 +282,53 @@ export default function ClientSection({
             Gestion des Clients & Ventes
           </h2>
           <p className="text-sm text-slate-500 leading-tight mt-1">
-            Dossiers d'installation de carrosserie isotherme et archivage des documents contractuels obligatoires.
+            Dossiers d'installation de carrosserie isotherme, factures proformas et archivage des documents.
           </p>
+
+          {/* Sub-tabs: Clients vs Proforma */}
+          <div className="flex items-center gap-2 mt-3">
+            <button
+              onClick={() => setActiveClientTab('real')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeClientTab === 'real'
+                  ? 'bg-slate-900 text-white shadow-3xs'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              <Receipt className="w-3.5 h-3.5 text-amber-400" />
+              Clients & Ventes Réelles ({clients.length})
+            </button>
+            <button
+              onClick={() => setActiveClientTab('proforma')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeClientTab === 'proforma'
+                  ? 'bg-blue-900 text-white shadow-3xs'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5 text-blue-400" />
+              Factures Proforma ({proformaInvoices.length})
+            </button>
+          </div>
         </div>
-        <button
-          onClick={handleOpenAddForm}
-          className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-sm rounded-lg shadow-xs transition-all duration-150 cursor-pointer"
-        >
-          <Plus className="w-4.5 h-4.5 text-slate-950" />
-          Nouveau Client
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => setIsProformaFormOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs sm:text-sm rounded-lg shadow-xs transition-all duration-150 cursor-pointer"
+          >
+            <FileText className="w-4 h-4 text-blue-200" />
+            Facture Proforma
+          </button>
+
+          <button
+            onClick={handleOpenAddForm}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs sm:text-sm rounded-lg shadow-xs transition-all duration-150 cursor-pointer"
+          >
+            <Plus className="w-4.5 h-4.5 text-slate-950" />
+            Nouveau Client
+          </button>
+        </div>
       </div>
 
       {/* Filters Area */}
@@ -402,8 +547,187 @@ export default function ClientSection({
         </div>
       </div>
 
-      {/* Main Customers List */}
-      {filteredClients.length > 0 ? (
+      {/* Main Customers or Proformas List */}
+      {activeClientTab === 'proforma' ? (
+        filteredProformas.length > 0 ? (
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-blue-900 text-white text-xs font-black uppercase tracking-wider">
+                    <th className="px-5 py-3.5">Client Potentiel & Contact</th>
+                    <th className="px-5 py-3.5">Articles & Désignation</th>
+                    <th className="px-5 py-3.5">Délai & Rendez-vous</th>
+                    <th className="px-5 py-3.5">Date Établissement</th>
+                    <th className="px-5 py-3.5">Montant HT & TTC</th>
+                    <th className="px-5 py-3.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm text-slate-700">
+                  {filteredProformas.map((proforma) => {
+                    const totalHT = proforma.produits ? proforma.produits.reduce((sum, item) => sum + ((item.prixApresRemise || item.prixBase || 0) * (item.quantite || 1)), 0) : 0;
+                    const totalTVA = proforma.tvaApplicable ? Math.round(totalHT * 0.19) : 0;
+                    const totalTTC = totalHT + totalTVA;
+
+                    return (
+                      <tr key={proforma.id} className="hover:bg-blue-50/40 transition-colors group">
+                        {/* Client Potentiel Info */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-lg bg-blue-100 border border-blue-200 text-blue-800 flex items-center justify-center font-black text-sm uppercase flex-shrink-0">
+                              {proforma.nomPrenom.substring(0, 2)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <p className="font-bold text-slate-900 text-base truncate max-w-[240px]" title={proforma.nomPrenom}>
+                                  {proforma.nomPrenom}
+                                </p>
+                                <span className="inline-flex items-center text-[9px] font-extrabold uppercase text-blue-800 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full tracking-wider">
+                                  Facture Proforma
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-3 text-xs text-slate-500 mt-1 font-mono">
+                                {proforma.telephone && (
+                                  <span className="flex items-center gap-1 font-semibold text-slate-700">
+                                    <Phone className="w-3.5 h-3.5 text-blue-600" /> {proforma.telephone}
+                                  </span>
+                                )}
+                                {proforma.email && (
+                                  <span className="flex items-center gap-1 truncate max-w-[150px]" title={proforma.email}>
+                                    <Mail className="w-3.5 h-3.5 text-slate-400" /> {proforma.email}
+                                  </span>
+                                )}
+                              </div>
+                              {(proforma.nif || proforma.rc || proforma.nis) && (
+                                <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                                  {proforma.rc && <span className="mr-2">RC: {proforma.rc}</span>}
+                                  {proforma.nif && <span className="mr-2">NIF: {proforma.nif}</span>}
+                                  {proforma.nis && <span>NIS: {proforma.nis}</span>}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Articles & Désignation */}
+                        <td className="px-5 py-4">
+                          <div className="leading-tight space-y-1">
+                            {proforma.produits && proforma.produits.length > 0 ? (
+                              proforma.produits.map((p, pIdx) => (
+                                <div key={p.id || pIdx} className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-bold text-slate-900 text-xs max-w-[200px] truncate" title={p.produit}>
+                                    • {p.produit}
+                                  </span>
+                                  <span className="inline-flex items-center text-[10px] font-black text-blue-900 bg-blue-100/80 px-1.5 py-0.5 rounded border border-blue-200">
+                                    x{p.quantite}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-slate-400 text-xs italic">-</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Délai & Rendez-vous */}
+                        <td className="px-5 py-4 text-xs">
+                          <div className="space-y-1">
+                            {proforma.delaiRealisation ? (
+                              <div className="font-bold text-slate-800 flex items-center gap-1">
+                                <Clock className="w-3.5 h-3.5 text-blue-600" />
+                                <span>Délai: {proforma.delaiRealisation}</span>
+                              </div>
+                            ) : (
+                              <span className="text-slate-400 italic">Non spécifié</span>
+                            )}
+                            {proforma.rendezVous && (
+                              <div className="text-[11px] text-blue-950 font-semibold bg-blue-50 border border-blue-100 rounded px-2 py-0.5 inline-block">
+                                RDV: {proforma.rendezVous}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Date Proforma */}
+                        <td className="px-5 py-4 font-mono text-xs text-slate-600">
+                          {proforma.dateCreation ? new Date(proforma.dateCreation).toLocaleDateString('fr-FR', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric'
+                          }) : '-'}
+                        </td>
+
+                        {/* Montants HT & TTC */}
+                        <td className="px-5 py-4 font-mono">
+                          <div className="space-y-0.5">
+                            <p className="font-black text-slate-900 text-base">
+                              {formatCurrency(totalTTC)} <span className="text-[10px] font-bold text-blue-700 font-sans uppercase">TTC</span>
+                            </p>
+                            <p className="text-xs text-slate-500 font-medium font-sans">
+                              HT: <strong className="font-mono text-slate-700">{formatCurrency(totalHT)}</strong>
+                              {proforma.tvaApplicable && <span className="ml-1 text-[10px] text-emerald-700 font-bold font-sans">(TVA 19%)</span>}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenProformaDocument(proforma)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-lg shadow-3xs transition-all cursor-pointer"
+                              title="Voir & Imprimer la Facture Proforma PDF (Logo Carpôle)"
+                            >
+                              <Printer className="w-3.5 h-3.5" />
+                              Voir / Imprimer
+                            </button>
+
+                            <button
+                              onClick={() => handleConvertProformaToClient(proforma)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg shadow-3xs transition-all cursor-pointer"
+                              title="Convertir ce devis en Client & Commande Réelle"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              Convertir en Vente
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteProforma(proforma.id)}
+                              className="p-1.5 hover:bg-red-50 hover:text-red-600 text-slate-400 rounded-lg transition-colors cursor-pointer"
+                              title="Supprimer la Proforma"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-blue-50 px-5 py-3 border-t border-blue-100 text-xs text-blue-900 font-bold flex justify-between items-center font-sans">
+              <span>{filteredProformas.length} Facture{filteredProformas.length > 1 ? 's' : ''} Proforma enregistrée{filteredProformas.length > 1 ? 's' : ''}</span>
+              <span className="font-mono text-blue-700">Devis & Proformas non comptabilisés en Vente Réelle</span>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white border border-slate-200 rounded-xl p-8 text-center shadow-xs">
+            <FileSpreadsheet className="w-10 h-10 text-blue-400 mx-auto mb-3" />
+            <h3 className="text-sm font-bold text-slate-800 mb-1">Aucune Facture Proforma trouvée</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto mb-4">
+              {searchTerm ? 'Aucune proforma ne correspond à votre recherche.' : 'Vous n\'avez pas encore rédigé de facture proforma.'}
+            </p>
+            <button
+              onClick={() => setIsProformaFormOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              Rédiger une Facture Proforma
+            </button>
+          </div>
+        )
+      ) : filteredClients.length > 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -802,6 +1126,15 @@ export default function ClientSection({
           client={selectedDocClient}
           initialType={selectedDocType}
           onClose={() => setSelectedDocClient(null)}
+        />
+      )}
+
+      {/* Proforma Invoice Creation Modal */}
+      {isProformaFormOpen && (
+        <ProformaFormModal
+          onClose={() => setIsProformaFormOpen(false)}
+          onSave={handleSaveProforma}
+          stockItems={stockItems}
         />
       )}
 

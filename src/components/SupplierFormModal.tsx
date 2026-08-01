@@ -4,8 +4,8 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Supplier, SupplierProductItem, StockItem } from '../types';
-import { X, Calendar, ShoppingCart, AlertCircle, Plus, Trash2, Coins, Package, DollarSign, Building2, Phone, ShieldCheck } from 'lucide-react';
+import { Supplier, SupplierProductItem, StockItem, AttachedFile } from '../types';
+import { X, Calendar, ShoppingCart, AlertCircle, Plus, Trash2, Coins, Package, DollarSign, Building2, Phone, ShieldCheck, Upload, FileText, Eye, Calculator } from 'lucide-react';
 
 interface SupplierFormModalProps {
   supplier: Supplier | null; // Null means adding new, non-null means editing
@@ -21,6 +21,7 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
   const [livre, setLivre] = useState(false);
   const [tvaApplicable, setTvaApplicable] = useState(false);
   const [montantPaye, setMontantPaye] = useState<number>(0);
+  const [devis, setDevis] = useState<AttachedFile | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Multi-product state
@@ -31,7 +32,9 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       prixUnitaire: 0,
       quantite: 1,
       type: 'matiere_premiere',
-      unite: 'Unités'
+      unite: 'Unités',
+      transit: 0,
+      margeBeneficiaire: 1
     }
   ]);
 
@@ -43,13 +46,16 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       setLivre(supplier.livre ?? false);
       setTvaApplicable(supplier.tvaApplicable ?? false);
       setMontantPaye(supplier.montantPaye ?? 0);
+      setDevis(supplier.devis || null);
 
       if (supplier.produits && supplier.produits.length > 0) {
         setProduits(supplier.produits.map(p => ({
           ...p,
           id: p.id || crypto.randomUUID(),
           type: p.type || 'matiere_premiere',
-          unite: p.unite || 'Unités'
+          unite: p.unite || 'Unités',
+          transit: p.transit ?? 0,
+          margeBeneficiaire: p.margeBeneficiaire ?? 1
         })));
       } else if (supplier.articleAchete) {
         setProduits([{
@@ -58,7 +64,9 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
           prixUnitaire: supplier.prixUnitaire || 0,
           quantite: supplier.quantite || 1,
           type: 'matiere_premiere',
-          unite: 'Unités'
+          unite: 'Unités',
+          transit: 0,
+          margeBeneficiaire: 1
         }]);
       }
     } else {
@@ -68,13 +76,16 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       setLivre(false);
       setTvaApplicable(false);
       setMontantPaye(0);
+      setDevis(null);
       setProduits([{
         id: crypto.randomUUID(),
         produit: '',
         prixUnitaire: 0,
         quantite: 1,
         type: 'matiere_premiere',
-        unite: 'Unités'
+        unite: 'Unités',
+        transit: 0,
+        margeBeneficiaire: 1
       }]);
     }
   }, [supplier]);
@@ -97,7 +108,9 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
         prixUnitaire: 0,
         quantite: 1,
         type: 'matiere_premiere',
-        unite: 'Unités'
+        unite: 'Unités',
+        transit: 0,
+        margeBeneficiaire: 1
       }
     ]);
   };
@@ -120,10 +133,43 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
             updated.unite = matchedStock.unite || updated.unite;
           }
         }
+
+        // Formula calculation: Transit / Marge bénéficiaire = Prix Unitaire
+        if (field === 'transit' || field === 'margeBeneficiaire') {
+          const transitVal = field === 'transit' ? Math.max(0, parseFloat(value) || 0) : (updated.transit || 0);
+          const margeVal = field === 'margeBeneficiaire' ? (parseFloat(value) || 0) : (updated.margeBeneficiaire || 0);
+
+          if (transitVal > 0 && margeVal > 0) {
+            updated.prixUnitaire = Math.round((transitVal / margeVal) * 100) / 100;
+          }
+        }
+
         return updated;
       }
       return item;
     }));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setDevis({
+        id: crypto.randomUUID(),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        dataUrl: result,
+      });
+      setErrorMsg('');
+    };
+    reader.onerror = () => {
+      setErrorMsg("Erreur lors de la lecture du devis.");
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,7 +223,8 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
       createdAt: supplier ? supplier.createdAt : new Date().toISOString(),
       produits,
       montantPaye,
-      tvaApplicable
+      tvaApplicable,
+      devis
     };
 
     onSave(savedSupplier);
@@ -271,6 +318,58 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
                 </div>
               </div>
             </div>
+
+            {/* Document Devis Upload */}
+            <div className="pt-2 border-t border-slate-200">
+              <label className="text-[10px] font-black text-slate-600 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
+                <FileText className="w-3.5 h-3.5 text-blue-600" />
+                Devis Fournisseur (Document Joint Optional)
+              </label>
+
+              {devis ? (
+                <div className="flex items-center justify-between p-2.5 bg-blue-50/80 border border-blue-200 rounded-xl">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="text-xs font-bold text-blue-900 truncate">{devis.name}</span>
+                    <span className="text-[10px] text-blue-600 font-mono">({(devis.size / 1024).toFixed(1)} KB)</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const win = window.open();
+                        win?.document.write(`<iframe src="${devis.dataUrl}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                      }}
+                      className="p-1 text-blue-700 hover:bg-blue-100 rounded-lg cursor-pointer"
+                      title="Prévisualiser"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDevis(null)}
+                      className="p-1 text-red-600 hover:bg-red-50 rounded-lg cursor-pointer"
+                      title="Supprimer le devis"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative group">
+                  <input
+                    type="file"
+                    accept=".pdf,image/*"
+                    onChange={handleFileUpload}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                  />
+                  <div className="border border-dashed border-slate-300 group-hover:border-blue-500 bg-white group-hover:bg-blue-50/30 rounded-xl p-3 flex items-center justify-center gap-2 text-center transition-all">
+                    <Upload className="w-4 h-4 text-slate-400 group-hover:text-blue-600" />
+                    <span className="text-xs font-bold text-slate-600 group-hover:text-blue-900">Joindre le Devis du Fournisseur (PDF ou Image)</span>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Section 2: Liste des Produits Achetés */}
@@ -319,7 +418,7 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
                   <div className="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
                     
                     {/* Nom du Produit */}
-                    <div className="sm:col-span-5 space-y-1">
+                    <div className="sm:col-span-4 space-y-1">
                       <label className="text-[9px] font-black text-slate-500 uppercase block">Nom du Produit / Matériel *</label>
                       <input
                         type="text"
@@ -333,20 +432,48 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
                     </div>
 
                     {/* Type d'article */}
-                    <div className="sm:col-span-3 space-y-1">
-                      <label className="text-[9px] font-black text-slate-500 uppercase block">Type d'Article</label>
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[9px] font-black text-slate-500 uppercase block">Type</label>
                       <select
                         value={item.type || 'matiere_premiere'}
                         onChange={(e) => handleProductChange(item.id, 'type', e.target.value)}
                         className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 text-[11px] font-bold focus:bg-white focus:border-amber-500 focus:outline-hidden transition-all cursor-pointer"
                       >
-                        <option value="matiere_premiere">Matière Première</option>
+                        <option value="matiere_premiere">Mat. Première</option>
                         <option value="produit_fini">Produit Fini</option>
                       </select>
                     </div>
 
-                    {/* Prix Unitaire HT */}
+                    {/* Prix Transit (DA) */}
                     <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[9px] font-black text-blue-600 uppercase block">Frais Transit (DA)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={item.transit || ''}
+                        onChange={(e) => handleProductChange(item.id, 'transit', Math.max(0, parseFloat(e.target.value) || 0))}
+                        placeholder="Ex: 10000"
+                        className="w-full px-2 py-1.5 bg-blue-50/50 border border-blue-200 rounded-lg text-blue-900 text-xs font-mono font-bold focus:bg-white focus:border-blue-500 focus:outline-hidden transition-all"
+                      />
+                    </div>
+
+                    {/* Marge Bénéficiaire */}
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[9px] font-black text-indigo-600 uppercase block">Marge Bénéf.</label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={item.margeBeneficiaire || ''}
+                        onChange={(e) => handleProductChange(item.id, 'margeBeneficiaire', Math.max(0.01, parseFloat(e.target.value) || 0))}
+                        placeholder="Ex: 0.8"
+                        className="w-full px-2 py-1.5 bg-indigo-50/50 border border-indigo-200 rounded-lg text-indigo-900 text-xs font-mono font-bold focus:bg-white focus:border-indigo-500 focus:outline-hidden transition-all"
+                      />
+                    </div>
+
+                    {/* Prix Unitaire HT */}
+                    <div className="sm:col-span-1 space-y-1">
                       <label className="text-[9px] font-black text-slate-500 uppercase block">P.U. (DA) *</label>
                       <input
                         type="number"
@@ -356,13 +483,13 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
                         value={item.prixUnitaire || ''}
                         onChange={(e) => handleProductChange(item.id, 'prixUnitaire', Math.max(0, parseFloat(e.target.value) || 0))}
                         placeholder="0"
-                        className="w-full px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs font-mono font-bold focus:bg-white focus:border-amber-500 focus:outline-hidden transition-all"
+                        className="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 text-xs font-mono font-bold focus:bg-white focus:border-amber-500 focus:outline-hidden transition-all"
                       />
                     </div>
 
                     {/* Quantité */}
-                    <div className="sm:col-span-2 space-y-1">
-                      <label className="text-[9px] font-black text-slate-500 uppercase block">Quantité *</label>
+                    <div className="sm:col-span-1 space-y-1">
+                      <label className="text-[9px] font-black text-slate-500 uppercase block">Qté *</label>
                       <input
                         type="number"
                         min="1"
@@ -375,8 +502,12 @@ export default function SupplierFormModal({ supplier, onClose, onSave, stockItem
 
                   </div>
 
-                  {/* Line Total preview */}
-                  <div className="flex justify-end pt-1">
+                  {/* Formula helper notice & Line Total preview */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                    <span className="text-[9px] text-blue-700 font-medium flex items-center gap-1">
+                      <Calculator className="w-3 h-3 text-blue-500" />
+                      Calcul du Prix: <code className="bg-blue-50 px-1 py-0.5 rounded font-bold font-mono text-blue-900">Prix = Transit ÷ Marge</code>
+                    </span>
                     <span className="text-[10px] text-slate-400 font-mono font-bold">
                       Sous-total ligne : <strong className="text-slate-800">{formatCurrency((item.prixUnitaire || 0) * (item.quantite || 1))}</strong>
                     </span>

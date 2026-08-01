@@ -145,7 +145,7 @@ export default function DocumentViewerModal({ client, initialType = 'facture', o
   let acompteLabel = 'Acompte versé';
   let montantFactureTTC = montantPaye;
 
-  if (factureVariant === 'proforma' || (factureVariant === 'auto' && montantPaye === 0)) {
+  if (client.isProforma || factureVariant === 'proforma' || (factureVariant === 'auto' && montantPaye === 0)) {
     activeFactureType = 'FACTURE PROFORMA';
     montantFactureTTC = totalTTC;
   } else if (factureVariant === 'solde' || (factureVariant === 'auto' && montantPaye >= totalTTC && totalTTC > 0)) {
@@ -281,8 +281,8 @@ export default function DocumentViewerModal({ client, initialType = 'facture', o
           </div>
         </div>
 
-        {/* Facture Option Toolbar (Specific for Facture variants based on payments) */}
-        {docType === 'facture' && (
+        {/* Facture Option Toolbar (Specific for standard Facture variants based on payments) */}
+        {docType === 'facture' && !client.isProforma && (
           <div className="no-print bg-amber-50/90 border-b border-amber-200/80 px-6 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
             <div className="flex items-center gap-2 text-amber-950 font-bold">
               <Info className="w-4 h-4 text-amber-600 shrink-0" />
@@ -377,11 +377,28 @@ export default function DocumentViewerModal({ client, initialType = 'facture', o
             <div className="space-y-1 text-xs font-mono border-t sm:border-t-0 sm:border-l border-slate-200 pt-3 sm:pt-0 sm:pl-6">
               <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider font-sans mb-1">Fiscalité Client (Si Pro)</p>
               <p><span className="text-slate-500 font-sans">NIF Client :</span> {client.nif || 'N/A'}</p>
-              <p><span className="text-slate-500 font-sans">NIS Client :</span> {client.nis || 'N/A'}</p>
-              <p><span className="text-slate-500 font-sans">RC Client :</span> {client.rc || 'N/A'}</p>
-              <p><span className="text-slate-500 font-sans">Article :</span> {client.numArticle || 'N/A'}</p>
+              <p><span className="text-slate-500 font-sans font-bold">NIS Client :</span> {client.nis || 'N/A'}</p>
+              <p><span className="text-slate-500 font-sans font-bold">RC Client :</span> {client.rc || 'N/A'}</p>
             </div>
           </div>
+
+          {/* Proforma terms box (Délai de réalisation & Rendez-vous) */}
+          {(client.delaiRealisation || client.rendezVous) && (
+            <div className="my-4 p-3.5 bg-blue-50/80 border border-blue-200 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans">
+              {client.delaiRealisation && (
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-900 block">Délai de Réalisation Prévu :</span>
+                  <span className="font-extrabold text-blue-950 text-sm">{client.delaiRealisation}</span>
+                </div>
+              )}
+              {client.rendezVous && (
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-blue-900 block">Note / Rendez-vous Client :</span>
+                  <span className="font-extrabold text-blue-950 text-sm">{client.rendezVous}</span>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Order Details Table */}
           <div className="my-6 overflow-hidden rounded-xl border border-slate-300">
